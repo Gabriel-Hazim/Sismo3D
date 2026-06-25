@@ -55,7 +55,7 @@
             
             <div class="flex gap-2">
                 <button id="btn-trigger" class="flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20">
-                    Excitar Estructura
+                    Iniciar Sismo
                 </button>
                 <button id="btn-reset" class="flex-1 w-1/4 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 px-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
                     Reset
@@ -171,13 +171,11 @@
             const pisoGroup = new THREE.Group();
             pisoGroup.position.y = (i * ALTO_PISO) + (ALTO_PISO / 2);
 
-            // Núcleo habitable
             const nucleo = new THREE.Mesh(geoNucleo, matVentanas);
             nucleo.castShadow = true;
             nucleo.receiveShadow = true;
             pisoGroup.add(nucleo);
 
-            // Pantallas estructurales brutas periféricas (Aportan rigidez lateral real)
             const pIzq = new THREE.Mesh(geoPantallaX, matPantallaConcreto);
             pIzq.position.x = 2.3;
             pIzq.castShadow = true;
@@ -200,7 +198,6 @@
 
             groupEstructural.add(pisoGroup);
 
-            // Nodos para el motor de oscilación acoplado
             estructura.push({
                 mesh: pisoGroup,
                 y: pisoGroup.position.y,
@@ -211,87 +208,96 @@
             });
         }
 
-        // --- SISTEMA FÍSICO ACOPLADO DISCRETO (MDOF) ---
+        // --- SISTEMA FÍSICO ESTABILIZADO POR SUB-STEPS (MDOF) ---
         function updatePhysicsMDOF(dt) {
-            if (dt > 0.05) dt = 0.05; // Filtro de caídas de frames para el T616
+            if (dt > 0.05) dt = 0.05; 
             if (dt <= 0) return;
 
-            if (sismoActivo) {
-                tSismo += dt;
-                // Amplificación exponencial basada en la escala Richter
-                const amplitudSuelo = Math.pow(1.88, magRichter) * 0.014;
-                // Los sismos de magnitudes masivas tienen periodos más largos (menor frecuencia basal)
-                const freqSuelo = Math.max(0.5, 4.8 - (magRichter * 0.4));
+            // Dividimos el paso de tiempo del fotograma en 5 sub-pasos internos
+            // Esto evita sobreimpulsos de fuerza elástica (explosiones cinemáticas)
+            const SUB_STEPS = 5;
+            const subDt = dt / SUB_STEPS;
+
+            for (let step = 0; step < SUB_STEPS; step++) {
+                if (sismoActivo) {
+                    tSismo += subDt;
+                    const amplitudSuelo = Math.pow(1.85, magRichter) * 0.012;
+                    const freqSuelo = Math.max(0.6, 4.6 - (magRichter * 0.35));
+                    
+                    posSueloX = Math.sin(tSismo * freqSuelo * Math.PI * 2) * amplitudSuelo;
+                    posSueloZ = Math.cos(tSismo * freqSuelo * 1.15 * Math.PI * 2) * (amplitudSuelo * 0.5);
+                } else {
+                    // Retorno elástico suave al centro si el sismo está inactivo
+                    posSueloX += (0 - posSueloX) * 0.05;
+                    posSueloZ += (0 - posSueloZ) * 0.05;
+                }
+
+                const kStiffness = 300.0; 
+                const cDamping = 5.0;    
+
+                // Iteración de fuerzas cortantes inter-piso
+                for (let i = 0; i < NUM_PISOS; i++) {
+                    let pCurr = estructura[i];
+                    
+                    let posInferiorX = (i === 0) ? posSueloX : estructura[i - 1].x;
+                    let posInferiorZ = (i === 0) ? posSueloZ : estructura[i - 1].z;
+                    let velInferiorX = (i === 0) ? 0 : estructura[i - 1].vx;
+                    let velInferiorZ = (i === 0) ? 0 : estructura[i - 1].vz;
+
+                    let posSuperiorX = (i === NUM_PISOS - 1) ? pCurr.x : estructura[i + 1].x;
+                    let posSuperiorZ = (i === NUM_PISOS - 1) ? pCurr.z : estructura[i + 1].z;
+                    let velSuperiorX = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vx;
+                    let velSuperiorZ = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vz;
+
+                    let fElasticX = -kStiffness * (pCurr.x - posInferiorX) + kStiffness * (posSuperiorX - pCurr.x);
+                    let fElasticZ = -kStiffness * (pCurr.z - posInferiorZ) + kStiffness * (posSuperiorZ - pCurr.z);
+
+                    let fDampingX = -cDamping * (pCurr.vx - velInferiorX) + cDamping * (velSuperiorX - pCurr.vx);
+                    let fDampingZ = -cDamping * (pCurr.vz - velInferiorZ) + cDamping * (velSuperiorZ - pCurr.vz);
+
+                    pCurr.ax = (fElasticX + fDampingX) / pCurr.mass;
+                    pCurr.az = (fElasticZ + fDampingZ) / pCurr.mass;
+
+                    // Integración numérica limpia
+                    pCurr.vx += pCurr.ax * subDt;
+                    pCurr.vz += pCurr.az * subDt;
+                    pCurr.x += pCurr.vx * subDt;
+                    pCurr.z += pCurr.vz * subDt;
+                }
+            }
+
+            // --- ACTUALIZACIÓN DE MALLAS Y TELEMETRÍA (Una vez por frame) ---
+            let maxDisp = 0;
+            for (let i = 0; i < NUM_PISOS; i++) {
+                let p = estructura[i];
+                p.mesh.position.x = p.x;
+                p.mesh.position.z = p.z;
                 
-                posSueloX = Math.sin(tSismo * freqSuelo * Math.PI * 2) * amplitudSuelo;
-                posSueloZ = Math.cos(tSismo * freqSuelo * 1.15 * Math.PI * 2) * (amplitudSuelo * 0.5);
-                
-                document.getElementById('freq-val').innerText = `${freqSuelo.toFixed(2)} Hz`;
-            } else {
-                // El suelo regresa suavemente a cero si cesa la excitación externa
-                posSueloX += (0 - posSueloX) * 0.1;
-                posSueloZ += (0 - posSueloZ) * 0.1;
+                p.mesh.rotation.z = p.vx * 0.015;
+                p.mesh.rotation.x = -p.vz * 0.015;
+
+                if (i === NUM_PISOS - 1) {
+                    maxDisp = Math.sqrt(Math.pow(p.x - posSueloX, 2) + Math.pow(p.z - posSueloZ, 2)) * 4.5;
+                }
             }
 
             grid.position.x = posSueloX;
             grid.position.z = posSueloZ;
 
-            // Coeficientes mecánicos del concreto reforzado de Parque Central
-            const kStiffness = 340.0; 
-            const cDamping = 4.8;    
+            // Forzar protección contra desbordamientos numéricos previos (NaN)
+            if (isNaN(maxDisp)) maxDisp = 0;
 
-            // Cálculo iterativo de vectores de fuerza cortante por piso
-            for (let i = 0; i < NUM_PISOS; i++) {
-                let pCurr = estructura[i];
-                
-                let posInferiorX = (i === 0) ? posSueloX : estructura[i - 1].x;
-                let posInferiorZ = (i === 0) ? posSueloZ : estructura[i - 1].z;
-                let velInferiorX = (i === 0) ? 0 : estructura[i - 1].vx;
-                let velInferiorZ = (i === 0) ? 0 : estructura[i - 1].vz;
-
-                let posSuperiorX = (i === NUM_PISOS - 1) ? pCurr.x : estructura[i + 1].x;
-                let posSuperiorZ = (i === NUM_PISOS - 1) ? pCurr.z : estructura[i + 1].z;
-                let velSuperiorX = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vx;
-                let velSuperiorZ = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vz;
-
-                // Ley de elasticidad cortante + amortiguamiento viscoso estructural (Efecto disipador)
-                let fElasticX = -kStiffness * (pCurr.x - posInferiorX) + kStiffness * (posSuperiorX - pCurr.x);
-                let fElasticZ = -kStiffness * (pCurr.z - posInferiorZ) + kStiffness * (posSuperiorZ - pCurr.z);
-
-                let fDampingX = -cDamping * (pCurr.vx - velInferiorX) + cDamping * (velSuperiorX - pCurr.vx);
-                let fDampingZ = -cDamping * (pCurr.vz - velInferiorZ) + cDamping * (velSuperiorZ - pCurr.vz);
-
-                pCurr.ax = (fElasticX + fDampingX) / pCurr.mass;
-                pCurr.az = (fElasticZ + fDampingZ) / pCurr.mass;
-            }
-
-            // Integración final de Euler para actualización cinemática de los nodos 3D
-            let maxDisp = 0;
-            for (let i = 0; i < NUM_PISOS; i++) {
-                let p = estructura[i];
-                p.vx += p.ax * dt;
-                p.vz += p.az * dt;
-                p.x += p.vx * dt;
-                p.z += p.vz * dt;
-
-                p.mesh.position.x = p.x;
-                p.mesh.position.z = p.z;
-                
-                // Flexión angular por deformidad elástica momentánea
-                p.mesh.rotation.z = p.vx * 0.012;
-                p.mesh.rotation.x = -p.vz * 0.012;
-
-                if (i === NUM_PISOS - 1) {
-                    // Magnitud de deformación absoluta del tope (Escala real en metros)
-                    maxDisp = Math.sqrt(Math.pow(p.x - posSueloX, 2) + Math.pow(p.z - posSueloZ, 2)) * 5.2;
-                }
-            }
-
-            // Actualizar métricas dinámicas en pantalla
             document.getElementById('disp-val').innerText = `${maxDisp.toFixed(2)} m`;
             
-            const limitStress = 6.5; 
+            if (sismoActivo) {
+                const freqSuelo = Math.max(0.6, 4.6 - (magRichter * 0.35));
+                document.getElementById('freq-val').innerText = `${freqSuelo.toFixed(2)} Hz`;
+            }
+
+            const limitStress = 5.5; 
             let stressPerc = Math.min(100, (maxDisp / limitStress) * 100);
+            if (isNaN(stressPerc)) stressPerc = 0;
+
             const stressEl = document.getElementById('stress-val');
             stressEl.innerText = `${stressPerc.toFixed(1)}% MAT`;
 
@@ -325,7 +331,7 @@
             `;
         }
 
-        // --- CAPTURA DE COMPONENTES INTERACTIVOS DE LA UI ---
+        // --- COMPONENTES INTERACTIVOS DE LA UI ---
         const slider = document.getElementById('richter-slider');
         const sliderDisplay = document.getElementById('slider-display');
         const richterVal = document.getElementById('richter-val');
@@ -341,45 +347,54 @@
 
         slider.addEventListener('input', (e) => onSliderChange(e.target.value));
 
+        // Manejo del estado del interruptor de sismo
         btnTrigger.addEventListener('click', () => {
             sismoActivo = !sismoActivo;
             if (sismoActivo) {
-                btnTrigger.innerText = "Detener Excitación";
-                btnTrigger.className = "flex-2 w-3/4 bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider shadow-lg shadow-red-500/20 pointer-events-auto";
+                btnTrigger.innerText = "Detener Sismo";
+                btnTrigger.className = "flex-2 w-3/4 bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-4 rounded-xl transition-all text-xs uppercase tracking-wider shadow-lg shadow-red-500/20 pointer-events-auto";
             } else {
-                btnTrigger.innerText = "Excitar Estructura";
-                btnTrigger.className = "flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 pointer-events-auto";
+                btnTrigger.innerText = "Iniciar Sismo";
+                btnTrigger.className = "flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 pointer-events-auto";
             }
         });
 
+        // Limpieza dura de la memoria física en el botón de Reset
         btnReset.addEventListener('click', () => {
             sismoActivo = false;
             tSismo = 0;
+            posSueloX = 0;
+            posSueloZ = 0;
             slider.value = 1.0;
             onSliderChange(1.0);
-            btnTrigger.innerText = "Excitar Estructura";
-            btnTrigger.className = "flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider pointer-events-auto";
             
-            // Forzar el reposo absoluto del tensor físico de inmediato
+            btnTrigger.innerText = "Iniciar Sismo";
+            btnTrigger.className = "flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all text-xs uppercase tracking-wider pointer-events-auto";
+            
+            // Forzar reinicio absoluto de variables para eliminar veneno matemático (NaN)
             estructura.forEach(p => {
                 p.x = 0; p.z = 0; p.vx = 0; p.vz = 0; p.ax = 0; p.az = 0;
                 p.mesh.position.set(0, p.y, 0);
                 p.mesh.rotation.set(0, 0, 0);
             });
             grid.position.set(0, 0.02, 0);
+            
+            document.getElementById('disp-val').innerText = "0.00 m";
+            document.getElementById('stress-val').innerText = "0.0% MAT";
+            document.getElementById('stress-val').className = "text-right text-green-400 font-bold";
+            document.getElementById('freq-val').innerText = "4.50 Hz";
         });
 
-        // Responsividad ante cambios de orientación de pantalla
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Inicializar matriz informativa al cargar
+        // Inicialización inicial
         updateComparisonMatrix();
 
-        // --- BUCLE DE ANIMACIÓN DE ALTA FRECUENCIA (Render Loop) ---
+        // --- BUCLE PRINCIPAL DE RENDER ---
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);

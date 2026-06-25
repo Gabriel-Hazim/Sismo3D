@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Simulador Sísmico Avanzado - Parque Central</title>
+    <title>Simulador Sísmico Realista - Colapso Parque Central</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -32,20 +32,20 @@
                     <span class="text-slate-400">Deflexión Cúspide:</span>
                     <span id="disp-val" class="text-right text-orange-400">0.00 m</span>
                     
-                    <span class="text-slate-400">Esfuerzo de Corte:</span>
-                    <span id="stress-val" class="text-right text-green-400">0.0% MAT</span>
+                    <span class="text-slate-400">Integridad Estructural:</span>
+                    <span id="stress-val" class="text-right text-green-400 font-bold">100% SANA</span>
                 </div>
             </div>
 
             <div class="glass p-3 rounded-xl pointer-events-auto shadow-2xl w-full max-w-xs text-[11px]">
-                <div class="text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1 text-amber-400">Matriz de Resistencia Estructural</div>
+                <div class="text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1 text-amber-400">Estado de Fluencia Dinámica</div>
                 <div id="comparison-box" class="space-y-1 font-mono"></div>
             </div>
         </div>
 
         <div class="glass p-4 rounded-2xl pointer-events-auto shadow-2xl w-full max-w-md mx-auto mb-2">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Magnitud Sísmica (Richter)</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Fuerza del Sismo (Escala Richter)</span>
                 <span id="slider-display" class="bg-red-600 text-white px-2.5 py-0.5 rounded-md font-black text-xs font-mono">1.0</span>
             </div>
             
@@ -67,12 +67,11 @@
 
     <script>
         const structuralMatrix = [
-            { max: 3.0, tipo: "Adobe / Mampostería Simple", status: "Daños menores en asentamientos precarios. Estructuras modernas intactas." },
-            { max: 5.0, tipo: "Marcos de Acero Flexibles", status: "Soportan sin daño. Grietas menores en concreto no reforzado." },
-            { max: 7.0, tipo: "Diseño Sismorresistente Común", status: "Límite de diseño urbano estándar. Daño estructural severo en fachadas rígidas." },
-            { max: 8.5, tipo: "Torres Parque Central (Caracas)", status: "Macrocolumnas y núcleo rígido. Gran flexibilidad y absorción de ondas sin colapso." },
-            { max: 9.5, tipo: "Aislamiento de Base (Japón)", status: "Amortiguadores disipan el 80% de la onda basculante." },
-            { max: 10.0, tipo: "Límite Tectónico Teórico", status: "Fuerzas extremas. Se supera el umbral de aceleración de la gravedad (>2g)." }
+            { max: 3.0, tipo: "Adobe / Mampostería", status: "Fluencia elástica superada en bases. Grietas críticas." },
+            { max: 5.0, tipo: "Pórticos No Reforzados", status: "Falla por cortante en uniones viga-columna fijas." },
+            { max: 7.0, tipo: "Diseño Urbano Común", status: "Flexión excesiva. Inicio de colapso en pisos intermedios." },
+            { max: 8.5, tipo: "Torres Parque Central", status: "Núcleo rígido resiste, pero distorsiones extremas inician pancaking." },
+            { max: 10.0, tipo: "Falla Tectónica Absoluta", status: "Destrucción total de nexos cinemáticos por aceleración severa." }
         ];
 
         const NUM_PISOS = 18;
@@ -106,14 +105,12 @@
         controls.dampingFactor = 0.05;
         controls.maxPolarAngle = Math.PI / 2;
 
-        // Iluminación
         scene.add(new THREE.AmbientLight(0x1e293b, 1.4));
         const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.2);
         dirLight.position.set(30, 40, 20);
         dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // Terreno / Rejilla
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 }));
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
@@ -123,7 +120,6 @@
         grid.position.y = 0.02;
         scene.add(grid);
 
-        // Textura Procedural para Fachada de Ventanas
         function createFacadeTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 128; canvas.height = 128;
@@ -141,7 +137,6 @@
         }
         const facadeTex = createFacadeTexture();
 
-        // Modelado de la Torre
         const groupEstructural = new THREE.Group();
         scene.add(groupEstructural);
 
@@ -157,7 +152,6 @@
             pisoGroup.position.y = (i * ALTO_PISO) + (ALTO_PISO / 2);
 
             pisoGroup.add(new THREE.Mesh(geoNucleo, matVentanas));
-            
             const px1 = new THREE.Mesh(geoPantallaX, matConcreto); px1.position.x = 2.3; pisoGroup.add(px1);
             const px2 = new THREE.Mesh(geoPantallaX, matConcreto); px2.position.x = -2.3; pisoGroup.add(px2);
             const pz1 = new THREE.Mesh(geoPantallaZ, matConcreto); pz1.position.z = 2.3; pisoGroup.add(pz1);
@@ -168,42 +162,42 @@
 
             estructura.push({
                 mesh: pisoGroup,
-                y: pisoGroup.position.y,
+                yOriginal: pisoGroup.position.y,
                 x: 0, z: 0,
                 vx: 0, vz: 0,
                 temp_ax: 0, temp_az: 0,
-                mass: 1.0 - (i * 0.02) 
+                mass: 1.0 - (i * 0.02),
+                broken: false,
+                compression: 0,
+                tiltX: 0, tiltZ: 0
             });
         }
 
-        // --- MOTOR DE FÍSICA SEPARADO EN DOS PASOS COMPLETAMENTE ESTABLE ---
+        // --- MOTOR FÍSICO CON CÁLCULO DE CORTANTE Y COLAPSO ---
         function updatePhysicsMDOF(dt) {
-            if (dt > 0.03) dt = 0.03; // Previene saltos por lag térmico en móviles
+            if (dt > 0.03) dt = 0.03; 
             if (dt <= 0) return;
 
             const SUB_STEPS = 8;
             const subDt = dt / SUB_STEPS;
 
+            const kStiffness = 180.0; 
+            const cDamping = 4.8;    
+
             for (let step = 0; step < SUB_STEPS; step++) {
-                // Movimiento Armónico del Suelo
                 if (sismoActivo) {
                     tSismo += subDt;
-                    const amplitudSuelo = Math.pow(1.85, magRichter) * 0.012;
-                    const freqSuelo = Math.max(0.6, 4.6 - (magRichter * 0.35));
+                    const amplitudSuelo = Math.pow(1.9, magRichter) * 0.013;
+                    const freqSuelo = Math.max(0.5, 4.6 - (magRichter * 0.38));
                     
                     posSueloX = Math.sin(tSismo * freqSuelo * Math.PI * 2) * amplitudSuelo;
                     posSueloZ = Math.cos(tSismo * freqSuelo * 1.15 * Math.PI * 2) * (amplitudSuelo * 0.5);
                 } else {
-                    // Amortiguación suave del suelo hasta volver a cero absoluto
                     posSueloX += (0 - posSueloX) * 0.1;
                     posSueloZ += (0 - posSueloZ) * 0.1;
                 }
 
-                // Constantes calibradas para oscilación elástica realista
-                const kStiffness = 160.0; 
-                const cDamping = 4.5;    
-
-                // PASO 1: Capturar aceleraciones basadas en el estado síncrono actual
+                // PASO 1: Capturar Fuerzas y evaluar distorsión local (Drift)
                 for (let i = 0; i < NUM_PISOS; i++) {
                     let pCurr = estructura[i];
                     
@@ -217,18 +211,35 @@
                     let velSuperiorX = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vx;
                     let velSuperiorZ = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vz;
 
-                    // Ley de Hooke y fuerzas amortiguadoras inter-piso
-                    let fElasticX = -kStiffness * (pCurr.x - posInferiorX) + (i === NUM_PISOS - 1 ? 0 : kStiffness * (posSuperiorX - pCurr.x));
-                    let fElasticZ = -kStiffness * (pCurr.z - posInferiorZ) + (i === NUM_PISOS - 1 ? 0 : kStiffness * (posSuperiorZ - pCurr.z));
+                    // Análisis de Distorsión entre plantas colindantes
+                    let driftX = pCurr.x - posInferiorX;
+                    let driftZ = pCurr.z - posInferiorZ;
+                    let driftMag = Math.sqrt(driftX * driftX + driftZ * driftZ);
 
-                    let fDampingX = -cDamping * (pCurr.vx - velInferiorX) + (i === NUM_PISOS - 1 ? 0 : cDamping * (velSuperiorX - pCurr.vx));
-                    let fDampingZ = -cDamping * (pCurr.vz - velInferiorZ) + (i === NUM_PISOS - 1 ? 0 : cDamping * (velSuperiorZ - pCurr.vz));
+                    // Umbral crítico de fractura de concreto/acero
+                    let limiteFluencia = 0.45; 
+                    if (driftMag > limiteFluencia && !pCurr.broken) {
+                        pCurr.broken = true;
+                        // Guardar el vector unitario del corte para la dirección del desplome
+                        pCurr.tiltX = driftX / (driftMag || 1);
+                        pCurr.tiltZ = driftZ / (driftMag || 1);
+                    }
+
+                    // Degradación no lineal de rigidez estructural al quebrar
+                    let kActual = pCurr.broken ? kStiffness * 0.06 : kStiffness;
+                    let cActual = pCurr.broken ? cDamping * 0.25 : cDamping;
+
+                    let fElasticX = -kActual * (pCurr.x - posInferiorX) + (i === NUM_PISOS - 1 ? 0 : kActual * (posSuperiorX - pCurr.x));
+                    let fElasticZ = -kActual * (pCurr.z - posInferiorZ) + (i === NUM_PISOS - 1 ? 0 : kActual * (posSuperiorZ - pCurr.z));
+
+                    let fDampingX = -cActual * (pCurr.vx - velInferiorX) + (i === NUM_PISOS - 1 ? 0 : cActual * (velSuperiorX - pCurr.vx));
+                    let fDampingZ = -cActual * (pCurr.vz - velInferiorZ) + (i === NUM_PISOS - 1 ? 0 : cActual * (velSuperiorZ - pCurr.vz));
 
                     pCurr.temp_ax = (fElasticX + fDampingX) / pCurr.mass;
                     pCurr.temp_az = (fElasticZ + fDampingZ) / pCurr.mass;
                 }
 
-                // PASO 2: Integración Simpléctica simultánea (Conserva la energía y evita derivas numéricas)
+                // PASO 2: Integración Dinámica y reducción de altura (Pancaking)
                 for (let i = 0; i < NUM_PISOS; i++) {
                     let pCurr = estructura[i];
                     
@@ -237,22 +248,39 @@
                     pCurr.x += pCurr.vx * subDt;
                     pCurr.z += pCurr.vz * subDt;
 
-                    // Filtro de seguridad por si ocurre algún desbordamiento infinito aislado
-                    if (isNaN(pCurr.x) || Math.abs(pCurr.x) > 10) { pCurr.x = 0; pCurr.vx = 0; }
-                    if (isNaN(pCurr.z) || Math.abs(pCurr.z) > 10) { pCurr.z = 0; pCurr.vz = 0; }
+                    // Si el entrepiso cedió, la gravedad lo aplasta progresivamente
+                    if (pCurr.broken) {
+                        pCurr.compression = Math.min(ALTO_PISO * 0.82, pCurr.compression + subDt * 0.75);
+                    }
+
+                    if (isNaN(pCurr.x) || Math.abs(pCurr.x) > 15) { pCurr.x = 0; pCurr.vx = 0; }
+                    if (isNaN(pCurr.z) || Math.abs(pCurr.z) > 15) { pCurr.z = 0; pCurr.vz = 0; }
                 }
             }
 
-            // --- ACTUALIZACIÓN DE MALLAS 3D Y TELEMETRÍA ---
+            // --- RECONSTRUCCIÓN GEOMÉTRICA DE LA TORRE Y TELEMETRÍA ---
             let maxDisp = 0;
+            let brokenCount = 0;
+            let currentY = 0;
+
             for (let i = 0; i < NUM_PISOS; i++) {
                 let p = estructura[i];
+                if (p.broken) brokenCount++;
+
+                // Efecto Pancaking: la altura depende de la compresión acumulada de los pisos inferiores
+                let altoEfectivo = ALTO_PISO - p.compression;
+                currentY += altoEfectivo;
+                
+                p.mesh.position.y = currentY - (altoEfectivo / 2);
                 p.mesh.position.x = p.x;
                 p.mesh.position.z = p.z;
                 
-                // Efecto visual de rotación por cortante inter-piso
-                p.mesh.rotation.z = p.vx * 0.02;
-                p.mesh.rotation.x = -p.vz * 0.02;
+                // Rotación transitoria + Inclinación plástica permanente debida al colapso
+                let rotZ_plastica = p.broken ? (p.tiltX * (p.compression / ALTO_PISO) * 0.45) : 0;
+                let rotX_plastica = p.broken ? (-p.tiltZ * (p.compression / ALTO_PISO) * 0.45) : 0;
+
+                p.mesh.rotation.z = p.vx * 0.025 + rotZ_plastica;
+                p.mesh.rotation.x = -p.vz * 0.025 + rotX_plastica;
 
                 if (i === NUM_PISOS - 1) {
                     maxDisp = Math.sqrt(Math.pow(p.x - posSueloX, 2) + Math.pow(p.z - posSueloZ, 2)) * 5.0;
@@ -262,22 +290,43 @@
             grid.position.x = posSueloX;
             grid.position.z = posSueloZ;
 
+            // Actualización de UI
             if (isNaN(maxDisp)) maxDisp = 0;
             document.getElementById('disp-val').innerText = `${maxDisp.toFixed(2)} m`;
             
             if (sismoActivo) {
-                const freqSuelo = Math.max(0.6, 4.6 - (magRichter * 0.35));
+                const freqSuelo = Math.max(0.5, 4.6 - (magRichter * 0.38));
                 document.getElementById('freq-val').innerText = `${freqSuelo.toFixed(2)} Hz`;
             }
 
-            const limitStress = 6.0; 
-            let stressPerc = Math.min(100, (maxDisp / limitStress) * 100);
+            // Gestión del Estado de Integridad Global
             const stressEl = document.getElementById('stress-val');
-            stressEl.innerText = `${stressPerc.toFixed(1)}% MAT`;
+            const geoStatus = document.getElementById('geo-status');
 
-            if (stressPerc < 30) stressEl.className = "text-right text-green-400 font-bold";
-            else if (stressPerc < 65) stressEl.className = "text-right text-yellow-400 font-bold";
-            else stressEl.className = "text-right text-red-500 font-black animate-pulse";
+            if (brokenCount === 0) {
+                stressEl.innerText = "100% SANA";
+                stressEl.className = "text-right text-green-400 font-bold";
+                if (sismoActivo) {
+                    geoStatus.innerText = "TERREMOTO ACTIVO";
+                    geoStatus.className = "text-[10px] bg-red-950 text-red-400 px-2 py-0.5 rounded font-mono font-bold animate-pulse";
+                } else {
+                    geoStatus.innerText = "REPOSO";
+                    geoStatus.className = "text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold";
+                }
+            } else {
+                let pctSano = Math.max(0, Math.round(((NUM_PISOS - brokenCount) / NUM_PISOS) * 100));
+                stressEl.innerText = `${pctSano}% INTEGRAL`;
+                
+                if (pctSano > 70) {
+                    stressEl.className = "text-right text-yellow-400 font-bold";
+                    geoStatus.innerText = `DAÑO LOCALIZADO (${brokenCount} P.)`;
+                    geoStatus.className = "text-[10px] bg-amber-950 text-amber-400 px-2 py-0.5 rounded font-mono font-bold animate-pulse";
+                } else {
+                    stressEl.className = "text-right text-red-500 font-black animate-pulse";
+                    geoStatus.innerText = "COLAPSO PROGRESIVO";
+                    geoStatus.className = "text-[10px] bg-red-700 text-white px-2 py-0.5 rounded font-mono font-bold animate-bounce";
+                }
+            }
         }
 
         // --- MANEJO DE INTERFAZ DE USUARIO ---
@@ -286,15 +335,15 @@
             let currentTarget = structuralMatrix[0];
             for (let target of structuralMatrix) {
                 if (magRichter <= target.max) { currentTarget = target; break; }
-                if (magRichter > 9.5) currentTarget = structuralMatrix[5];
+                if (magRichter > 8.5) currentTarget = structuralMatrix[4];
             }
             containerBox.innerHTML = `
                 <div class="bg-slate-900/60 p-2 rounded border border-slate-700/60">
-                    <span class="text-red-400 font-bold">Límite Crítico para:</span> <br>
+                    <span class="text-red-400 font-bold">Límite Crítico:</span> <br>
                     <span class="text-white text-xs font-semibold">${currentTarget.tipo}</span>
                 </div>
                 <div class="text-slate-300 text-[10px] leading-relaxed mt-1">
-                    <span class="text-amber-400 font-bold">Comportamiento:</span> ${currentTarget.status}
+                    <span class="text-amber-400 font-bold">Física:</span> ${currentTarget.status}
                 </div>
             `;
         }
@@ -304,7 +353,6 @@
         const richterVal = document.getElementById('richter-val');
         const btnTrigger = document.getElementById('btn-trigger');
         const btnReset = document.getElementById('btn-reset');
-        const geoStatus = document.getElementById('geo-status');
 
         function onSliderChange(val) {
             magRichter = parseFloat(val);
@@ -320,13 +368,9 @@
             if (sismoActivo) {
                 btnTrigger.innerText = "Detener Sismo";
                 btnTrigger.className = "w-3/4 bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-4 rounded-xl transition-all text-xs uppercase tracking-wider shadow-lg shadow-red-500/20 pointer-events-auto";
-                geoStatus.innerText = "TERREMOTO ACTIVO";
-                geoStatus.className = "text-[10px] bg-red-950 text-red-400 px-2 py-0.5 rounded font-mono font-bold animate-pulse";
             } else {
                 btnTrigger.innerText = "Iniciar Sismo";
                 btnTrigger.className = "w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 pointer-events-auto";
-                geoStatus.innerText = "REPOSO";
-                geoStatus.className = "text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold";
             }
         });
 
@@ -339,19 +383,18 @@
             
             btnTrigger.innerText = "Iniciar Sismo";
             btnTrigger.className = "w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all text-xs uppercase tracking-wider pointer-events-auto";
-            geoStatus.innerText = "REPOSO";
-            geoStatus.className = "text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold";
 
-            estructura.forEach(p => {
+            estructura.forEach((p, i) => {
                 p.x = 0; p.z = 0; p.vx = 0; p.vz = 0; p.temp_ax = 0; p.temp_az = 0;
-                p.mesh.position.set(0, p.y, 0);
+                p.broken = false;
+                p.compression = 0;
+                p.tiltX = 0; p.tiltZ = 0;
+                p.mesh.position.set(0, (i * ALTO_PISO) + (ALTO_PISO / 2), 0);
                 p.mesh.rotation.set(0, 0, 0);
             });
             grid.position.set(0, 0.02, 0);
             
             document.getElementById('disp-val').innerText = "0.00 m";
-            document.getElementById('stress-val').innerText = "0.0% MAT";
-            document.getElementById('stress-val').className = "text-right text-green-400 font-bold";
             document.getElementById('freq-val').innerText = "4.50 Hz";
         });
 

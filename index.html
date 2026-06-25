@@ -3,49 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Simulador Sísmico - Torre de Parque Central</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <title>Simulador Sísmico Avanzado - Parque Central</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { -webkit-touch-callout: none; -webkit-user-select: none; }
+        .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(51, 65, 85, 0.5); }
+    </style>
 </head>
-<body class="bg-gray-900 text-white overflow-hidden select-none w-screen h-screen real-vvh">
+<body class="bg-slate-950 text-slate-100 overflow-hidden w-screen h-screen font-sans">
 
-    <div class="absolute top-0 left-0 w-full p-4 z-10 pointer-events-none flex flex-col justify-between h-full">
+    <div class="absolute top-0 left-0 w-full h-full p-3 z-10 pointer-events-none flex flex-col justify-between">
         
-        <div class="bg-gray-800 bg-opacity-80 p-4 rounded-xl border border-gray-700 backdrop-filter backdrop-blur-md pointer-events-auto shadow-2xl max-w-sm">
-            <h1 class="text-xl font-black tracking-wider text-yellow-500 uppercase">Simulador Sísmico 3D</h1>
-            <p class="text-xs text-gray-400 font-semibold mb-2">Estructura: Torre Este (Parque Central)</p>
-            <hr class="border-gray-700 my-2">
-            
-            <div class="grid grid-cols-2 gap-2 text-sm font-mono">
-                <div>Escala Richter:</div>
-                <div id="richter-val" class="text-right text-red-400 font-bold">1.0 M_w</div>
-                
-                <div>Frecuencia:</div>
-                <div id="freq-val" class="text-right text-blue-400">0.50 Hz</div>
-                
-                <div>Desplazamiento Máx:</div>
-                <div id="disp-val" class="text-right text-orange-400">0.00 m</div>
-                
-                <div>Estado Estructural:</div>
-                <div id="status-val" class="text-right text-green-400 font-bold">ESTABLE</div>
+        <div class="flex flex-col md:flex-row gap-3 w-full justify-between items-start">
+            <div class="glass p-4 rounded-xl pointer-events-auto shadow-2xl w-full max-w-sm">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-1 mb-2">
+                    <h1 class="text-sm font-black tracking-widest text-amber-500 uppercase">ANÁLISIS ESTRUCTURAL V70</h1>
+                    <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">EDIFICACIÓN TIPO IV</span>
+                </div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs font-mono">
+                    <span class="text-slate-400">Magnitud Momento:</span>
+                    <span id="richter-val" class="text-right text-red-400 font-bold">1.0 Mw</span>
+                    
+                    <span class="text-slate-400">Resonancia Suelo:</span>
+                    <span id="freq-val" class="text-right text-cyan-400">2.50 Hz</span>
+                    
+                    <span class="text-slate-400">Deflexión Cúspide:</span>
+                    <span id="disp-val" class="text-right text-orange-400">0.00 m</span>
+                    
+                    <span class="text-slate-400">Esfuerzo de Corte:</span>
+                    <span id="stress-val" class="text-right text-green-400">0.0% MAT</span>
+                </div>
+            </div>
+
+            <div class="glass p-3 rounded-xl pointer-events-auto shadow-2xl w-full max-w-xs text-[11px]">
+                <div class="text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1 text-amber-400">Matriz de Resistencia Estructural</div>
+                <div id="comparison-box" class="space-y-1 font-mono transition-all duration-300">
+                    </div>
             </div>
         </div>
 
-        <div class="bg-gray-800 bg-opacity-90 p-5 rounded-2xl border border-gray-700 backdrop-filter backdrop-blur-md pointer-events-auto shadow-2xl w-full max-w-md mx-auto mb-2">
-            <div class="flex justify-between items-center mb-3">
-                <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Magnitud del Terremoto</span>
-                <span id="richter-slider-val" class="bg-red-600 px-3 py-0.5 rounded-full font-black text-sm font-mono">1.0</span>
+        <div class="glass p-4 rounded-2xl pointer-events-auto shadow-2xl w-full max-w-md mx-auto mb-2">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Magnitud Sísmica (Richter)</span>
+                <span id="slider-display" class="bg-red-600 text-white px-2.5 py-0.5 rounded-md font-black text-xs font-mono">1.0</span>
             </div>
             
             <input type="range" id="richter-slider" min="1.0" max="10.0" step="0.1" value="1.0" 
-                   class="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500 mb-4">
+                   class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-500 mb-3">
             
             <div class="flex gap-2">
-                <button id="btn-trigger" class="flex-1 bg-yellow-600 hover:bg-yellow-500 active:bg-yellow-700 text-gray-900 font-black py-3 px-4 rounded-xl transition duration-150 uppercase tracking-wider text-xs">
-                    Iniciar Onda Símica
+                <button id="btn-trigger" class="flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20">
+                    Excitar Estructura
                 </button>
-                <button id="btn-reset" class="bg-gray-700 hover:bg-gray-600 active:bg-gray-800 px-5 rounded-xl font-bold transition duration-150 text-xs uppercase tracking-wider">
+                <button id="btn-reset" class="flex-1 w-1/4 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 px-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
                     Reset
                 </button>
             </div>
@@ -55,271 +67,346 @@
     <div id="canvas-container" class="w-full h-full absolute top-0 left-0 z-0"></div>
 
     <script>
-        // --- CONFIGURACIÓN ESTRUCTURAL Y FÍSICA ---
-        const TOWER_HEIGHT = 22.5; // Escala 1:10 aproximada para visualización
-        const NUM_SEGMENTS = 15;   // Segmentos de la torre para simular la flexión armónica
-        let earthquakeActive = false;
-        let earthquakeTime = 0;
-        let richterMagnitude = 1.0;
+        // --- BASE DE DATOS DE COMPARACIÓN ESTRUCTURAL ---
+        const structuralMatrix = [
+            { max: 3.0, tipo: "Adobe / Masonería Simple", status: "Daños menores en asentamientos precarios. Estructuras modernas intactas." },
+            { max: 5.0, tipo: "Marcos de Acero Flexibles", status: "Soportan sin daño. Grietas menores en concreto no reforzado." },
+            { max: 7.0, tipo: "Diseño Sismorresistente Estándar", status: "Límite de diseño urbano común. Daño estructural severo en mampostería." },
+            { max: 8.0, tipo: "Torres Parque Central (Caracas)", status: "Diseño con macrocolumnas y núcleo rígido. Daño severo en fachadas, flexión extrema controlada." },
+            { max: 9.0, tipo: "Aislamiento de Base (Japón/Taiwán)", status: "Sistemas con amortiguadores elastoméricos salvan núcleos. Colapso masivo de vialidades aledañas." },
+            { max: 10.0, font: "Teórico / Falla de San Andrés", status: "Límite tectónico terrestre. Ruptura del concreto por aceleración de gravedad superada (>2g)." }
+        ];
+
+        // --- PARÁMETROS FÍSICOS Y GEOMÉTRICOS ---
+        const NUM_PISOS = 18;
+        const ALTURA_TOTAL = 24.0; 
+        const ALTO_PISO = ALTURA_TOTAL / NUM_PISOS;
         
-        // Configuración de la Escena
+        let sismoActivo = false;
+        let tSismo = 0;
+        let magRichter = 1.0;
+
+        // Variables de simulación del motor físico (MDOF Coupled System)
+        // Cada piso se comporta como una masa interconectada por resortes y amortiguadores reales
+        let estructura = [];
+        let posSueloX = 0, posSueloZ = 0;
+
+        // --- CONFIGURACIÓN THREE.JS ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a); // Fondo Slate-900
-        scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+        scene.background = new THREE.Color(0x05050a);
+        scene.fog = new THREE.FogExp2(0x05050a, 0.02);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(20, 15, 30);
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(22, 16, 26);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimización de rendimiento móvil
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Balance exacto para la GPU Mali-G57
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(renderer.domElement);
 
-        // Controles de cámara táctiles
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2 + 0.1; // Evita pasar por debajo del suelo
-        controls.minDistance = 10;
-        controls.maxDistance = 60;
+        controls.maxPolarAngle = Math.PI / 2; 
+        controls.minDistance = 12;
+        controls.maxDistance = 55;
 
-        // --- ILUMINACIÓN ---
-        const ambientLight = new THREE.AmbientLight(0x334155, 1.5);
-        scene.add(ambientLight);
+        // --- ILUMINACIÓN AVANZADA ---
+        const lightAmbient = new THREE.AmbientLight(0x1e293b, 1.2);
+        scene.add(lightAmbient);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.5);
         dirLight.position.set(30, 40, 20);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 1024;
         dirLight.shadow.mapSize.height = 1024;
         scene.add(dirLight);
 
-        // --- CREACIÓN DEL ENTORNO (Caracas / Suelo) ---
-        const groundGeo = new THREE.PlaneGeometry(100, 100);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+        // Suelo Técnico
+        const groundGeo = new THREE.PlaneGeometry(120, 120);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        const gridHelper = new THREE.GridHelper(100, 50, 0x475569, 0x334155);
-        gridHelper.position.y = 0.01;
-        scene.add(gridHelper);
+        const grid = new THREE.GridHelper(100, 40, 0x334155, 0x1e293b);
+        grid.position.y = 0.02;
+        scene.add(grid);
 
-        // --- MODELADO DE LA TORRE DE PARQUE CENTRAL (Modular / Segmentada) ---
-        // Contenedor maestro de la estructura
-        const structuralSystem = new THREE.Group();
-        scene.add(structuralSystem);
-
-        const towerSegments = [];
-        const segmentHeight = TOWER_HEIGHT / NUM_SEGMENTS;
-
-        // Geometrías base para simular la silueta arquitectónica real de Parque Central (Prisma con pantallas estructurales)
-        const coreGeo = new THREE.BoxGeometry(4, segmentHeight, 4);
-        const coreMat = new THREE.MeshStandardMaterial({ 
-            color: 0x64748b, 
-            roughness: 0.5, 
-            metalness: 0.2,
-            transparent: true,
-            opacity: 0.95 
-        });
-
-        // Macro-columnas laterales características de Parque Central
-        const pillarGeo = new THREE.BoxGeometry(0.5, segmentHeight, 4.2);
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4 });
-
-        for (let i = 0; i < NUM_SEGMENTS; i++) {
-            const segmentGroup = new THREE.Group();
-            // Posicionamiento apilado
-            segmentGroup.position.y = (i * segmentHeight) + (segmentHeight / 2);
-            
-            // Núcleo del piso
-            const core = new THREE.Mesh(coreGeo, coreMat);
-            core.castShadow = true;
-            core.receiveShadow = true;
-            segmentGroup.add(core);
-
-            // Columnas estructurales externas (Izquierda y Derecha)
-            const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
-            leftPillar.position.x = 2.1;
-            leftPillar.castShadow = true;
-            segmentGroup.add(leftPillar);
-
-            const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
-            rightPillar.position.x = -2.1;
-            rightPillar.castShadow = true;
-            segmentGroup.add(rightPillar);
-
-            // Guardar datos iniciales de posición para cálculos cinemáticos
-            structuralSystem.add(segmentGroup);
-            towerSegments.push({
-                mesh: segmentGroup,
-                initialY: segmentGroup.position.y,
-                initialX: segmentGroup.position.x,
-                initialZ: segmentGroup.position.z
-            });
-        }
-
-        // --- MOTOR DE FÍSICAS SÍSMICAS ANALÍTICAS ---
-        function updateSeismicPhysics(deltaTime) {
-            if (!earthquakeActive && earthquakeTime <= 0) {
-                // Amortiguación de retorno al estado de reposo (Damping)
-                towerSegments.forEach((seg, idx) => {
-                    seg.mesh.position.x += (seg.initialX - seg.mesh.position.x) * 0.1;
-                    seg.mesh.position.z += (seg.initialZ - seg.mesh.position.z) * 0.1;
-                    seg.mesh.rotation.z += (0 - seg.mesh.rotation.z) * 0.1;
-                });
-                gridHelper.position.x *= 0.9;
-                gridHelper.position.z *= 0.9;
-                return;
-            }
-
-            if (earthquakeActive) {
-                earthquakeTime += deltaTime;
-            }
-
-            // Cálculo analítico basado en la magnitud de Richter (Escala Exponencial)
-            // Cada grado Richter multiplica la energía liberada por ~32, mapeamos la amplitud visual aquí:
-            const amplitudeFactor = Math.pow(1.75, richterMagnitude) * 0.02;
-            
-            // Modulación de la frecuencia fundamental del suelo según la magnitud (Sismos grandes tienen ondas más largas)
-            const baseFrequency = Math.max(0.5, 5.0 - (richterMagnitude * 0.4));
-            
-            // Movimiento armónico compuesto del suelo (Ondas P y S combinadas)
-            const groundX = Math.sin(earthquakeTime * baseFrequency * Math.PI * 2) * amplitudeFactor;
-            const groundZ = Math.cos(earthquakeTime * baseFrequency * 1.3 * Math.PI * 2) * (amplitudeFactor * 0.5);
-
-            // Mover el suelo (Simulación visual del epicentro)
-            gridHelper.position.x = groundX;
-            gridHelper.position.z = groundZ;
-
-            // Desplazamiento de los segmentos de la torre usando una función de transferencia de viga en voladizo
-            // Desplazamiento máximo en la cúspide (Efecto Látigo / Resonancia)
-            let maxCurrentDisp = 0;
-
-            towerSegments.forEach((seg, idx) => {
-                const heightRatio = seg.initialY / TOWER_HEIGHT;
-                
-                // Desfase de fase según la altura (Propagación de la onda a través de la estructura de concreto)
-                const phaseLag = heightRatio * Math.PI * 1.2;
-                
-                // Amplificación dinámica por altura (función cuadrática no lineal)
-                const dynamicAmplification = Math.pow(heightRatio, 2.2) * (richterMagnitude * 0.65);
-                
-                // Cálculo de la deformación final del segmento
-                const targetX = groundX + Math.sin(earthquakeTime * baseFrequency * Math.PI * 2 - phaseLag) * amplitudeFactor * dynamicAmplification;
-                const targetZ = groundZ + Math.cos(earthquakeTime * baseFrequency * 1.3 * Math.PI * 2 - phaseLag) * amplitudeFactor * dynamicAmplification * 0.5;
-
-                seg.mesh.position.x = targetX;
-                seg.mesh.position.z = targetZ;
-
-                // Rotación/Inclinación inducida por el esfuerzo de corte cortante
-                seg.mesh.rotation.z = (targetX - groundX) * 0.04;
-
-                // Monitorear el desplazamiento del tope para las métricas de UI
-                if (idx === NUM_SEGMENTS - 1) {
-                    maxCurrentDisp = Math.sqrt(targetX * targetX + targetZ * targetZ) * 4.4; // Multiplicador de escala real (m)
+        // --- TEXTURA PROCEDURAL PARA LAS VENTANAS (Ahorra memoria y GPU) ---
+        function createFacadeTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(0, 0, 128, 128);
+            ctx.fillStyle = '#0f172a';
+            for (let y = 4; y < 128; y += 16) {
+                for (let x = 4; x < 128; x += 12) {
+                    ctx.fillRect(x, y, 8, 10);
                 }
-            });
-
-            // Actualizar Interfaz Gráfica de Usuario en tiempo real
-            document.getElementById('disp-val').innerText = `${maxCurrentDisp.toFixed(2)} m`;
-            document.getElementById('freq-val').innerText = `${baseFrequency.toFixed(2)} Hz`;
-            
-            updateStructuralStatus(maxCurrentDisp);
-        }
-
-        // --- SISTEMA DE EVALUACIÓN DE DAÑOS EN BASE A REGLAS ---
-        function updateStructuralStatus(displacement) {
-            const statusEl = document.getElementById('status-val');
-            
-            if (richterMagnitude < 4.0) {
-                statusEl.innerText = "ESTABLE";
-                statusEl.className = "text-right text-green-400 font-bold";
-                coreMat.color.setHex(0x64748b);
-            } else if (richterMagnitude >= 4.0 && richterMagnitude < 6.5) {
-                statusEl.innerText = "VIBRACIÓN LIGERA";
-                statusEl.className = "text-right text-yellow-400 font-bold";
-                coreMat.color.setHex(0xb45309);
-            } else if (richterMagnitude >= 6.5 && richterMagnitude < 8.0) {
-                statusEl.innerText = "DAÑO EN FACHADA";
-                statusEl.className = "text-right text-orange-500 font-bold";
-                coreMat.color.setHex(0xd97706);
-            } else if (richterMagnitude >= 8.0 && richterMagnitude < 9.5) {
-                statusEl.innerText = "FALLA ESTRUCTURAL";
-                statusEl.className = "text-right text-red-500 font-black animate-pulse";
-                coreMat.color.setHex(0xdc2626);
-            } else {
-                statusEl.innerText = "COLAPSO CRÍTICO";
-                statusEl.className = "text-right text-red-700 font-black animate-ping";
-                coreMat.color.setHex(0x7f1d1d);
             }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 1);
+            return texture;
+        }
+        const facadeTex = createFacadeTexture();
+
+        // --- CONSTRUCCIÓN REALISTA DE PARQUE CENTRAL (Brutalismo Estructural) ---
+        const groupEstructural = new THREE.Group();
+        scene.add(groupEstructural);
+
+        const matConcreto = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7, metalness: 0.1 });
+        const matVentanas = new THREE.MeshStandardMaterial({ map: facadeTex, roughness: 0.2 });
+        const matPantallaConcreto = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+
+        // Geometrías modulares internas por piso
+        const geoNucleo = new THREE.BoxGeometry(4.2, ALTO_PISO, 4.2);
+        const geoPantallaX = new THREE.BoxGeometry(0.6, ALTO_PISO, 4.5); // Las icónicas pantallas estructurales de Parque Central
+        const geoPantallaZ = new THREE.BoxGeometry(4.5, ALTO_PISO, 0.6);
+
+        for (let i = 0; i < NUM_PISOS; i++) {
+            const pisoGroup = new THREE.Group();
+            pisoGroup.position.y = (i * ALTO_PISO) + (ALTO_PISO / 2);
+
+            // Núcleo central con ventanas registradas por textura
+            const nucleo = new THREE.Mesh(geoNucleo, matVentanas);
+            nucleo.castShadow = true;
+            nucleo.receiveShadow = true;
+            pisoGroup.add(nucleo);
+
+            // Pantallas estructurales de concreto en los bordes (Diseño real antisísmico de la torre)
+            const pIzq = new THREE.Mesh(geoPantallaX, matPantallaConcreto);
+            pIzq.position.x = 2.3;
+            pIzq.castShadow = true;
+            pisoGroup.add(pIzq);
+
+            const pDer = new THREE.Mesh(geoPantallaX, matPantallaConcreto);
+            pDer.position.x = -2.3;
+            pDer.castShadow = true;
+            pisoGroup.add(pDer);
+
+            const pFras = new THREE.Mesh(geoPantallaZ, matPantallaConcreto);
+            pFras.position.z = 2.3;
+            pFras.castShadow = true;
+            pisoGroup.add(pFras);
+
+            const pFront = new THREE.Mesh(geoPantallaZ, matPantallaConcreto);
+            pFront.position.z = -2.3;
+            pFront.castShadow = true;
+            pisoGroup.add(pFront);
+
+            groupEstructural.add(pisoGroup);
+
+            // Matriz física por nodo (Masa, Posición, Velocidad, Aceleración)
+            estructura.push({
+                mesh: pisoGroup,
+                y: pisoGroup.position.y,
+                x: 0, z: 0,
+                vx: 0, vz: 0,
+                ax: 0, az: 0,
+                mass: 1.0 - (i * 0.02) // Reducción de masa en la cúspide
+            });
         }
 
-        // --- CAPTURA DE EVENTOS E INTERFAZ (UI) ---
+        // --- MOTOR CINEMÁTICO REALISTA DE RED DE TENSORES ---
+        // Implementación de integración numérica de Verlet/Euler para oscilaciones estructurales amortiguadas
+        function updatePhysicsMDOF(dt) {
+            if (dt > 0.1) dt = 0.1; // Previene saltos bruscos si el frame rate cae en el teléfono
+
+            // Control de excitación del suelo (Epicentro del Sismo)
+            if (sismoActivo) {
+                tSismo += dt;
+                // Escala de energía Richter exponencial: energía liberada ~ 31.6^M
+                const amplitudSuelo = Math.pow(1.9, magRichter) * 0.015;
+                // Frecuencia natural cambia según magnitud (sismos masivos tienen longitudes de onda mayores)
+                const freqSuelo = Math.max(0.6, 4.5 - (magRichter * 0.38));
+                
+                posSueloX = Math.sin(tSismo * freqSuelo * Math.PI * 2) * amplitudSuelo;
+                posSueloZ = Math.cos(tSismo * freqSuelo * 1.1 * Math.PI * 2) * (amplituSuelo * 0.6);
+                
+                document.getElementById('freq-val').innerText = `${freqSuelo.toFixed(2)} Hz`;
+            } else {
+                posSueloX += (0 - posSueloX) * 0.1;
+                posSueloZ += (0 - posSueloZ) * 0.1;
+            }
+
+            // Mover la rejilla del suelo visualmente
+            grid.position.x = posSueloX;
+            grid.position.z = posSueloZ;
+
+            // Constantes de rigidez y amortiguamiento del concreto reforzado de Parque Central
+            const kStiffness = 320.0; 
+            const cDamping = 4.5;    // Factor de disipación interna estructural (Concreto ~5%)
+
+            // Cálculo de fuerzas iterativo por piso (Interacción de vecindades de masas acopladas)
+            for (let i = 0; i < NUM_PISOS; i++) {
+                let pCurr = estructura[i];
+                
+                // Posiciones y velocidades de los nodos limítrofes (inferior y superior)
+                let posInferiorX = (i === 0) ? posSueloX : estructura[i - 1].x;
+                let posInferiorZ = (i === 0) ? posSueloZ : estructura[i - 1].z;
+                let velInferiorX = (i === 0) ? 0 : estructura[i - 1].vx;
+                let velInferiorZ = (i === 0) ? 0 : estructura[i - 1].vz;
+
+                let posSuperiorX = (i === NUM_PISOS - 1) ? pCurr.x : estructura[i + 1].x;
+                let posSuperiorZ = (i === NUM_PISOS - 1) ? pCurr.z : estructura[i + 1].z;
+                let velSuperiorX = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vx;
+                let velSuperiorZ = (i === NUM_PISOS - 1) ? 0 : estructura[i + 1].vz;
+
+                // Fuerzas de corte elásticas (Ley de Hooke aplicada a cortante de vigas)
+                let fElasticX = -kStiffness * (pCurr.x - posInferiorX) + kStiffness * (posSuperiorX - pCurr.x);
+                let fElasticZ = -kStiffness * (pCurr.z - posInferiorZ) + kStiffness * (posSuperiorZ - pCurr.z);
+
+                // Fuerzas de disipación viscosa
+                let fDampingX = -cDamping * (pCurr.vx - velInferiorX) + cDamping * (velSuperiorX - pCurr.vx);
+                let fDampingZ = -cDamping * (pCurr.vz - velInferiorZ) + cDamping * (velSuperiorZ - pCurr.vz);
+
+                // Newton: Segunda Ley -> Segunda derivada pos
+                pCurr.ax = (fElasticX + fDampingX) / pCurr.mass;
+                pCurr.az = (fElasticZ + fDampingZ) / pCurr.mass;
+            }
+
+            // Actualización cinemática final de los nodos
+            let maxDisp = 0;
+            for (let i = 0; i < NUM_PISOS; i++) {
+                let p = estructura[i];
+                p.vx += p.ax * dt;
+                p.vz += p.az * dt;
+                p.x += p.vx * dt;
+                p.z += p.vz * dt;
+
+                // Acoplar posiciones calculadas al render 3D de Three.js
+                p.mesh.position.x = p.x;
+                p.mesh.position.z = p.z;
+                
+                // Rotación por deformación plástica momentánea
+                p.mesh.rotation.z = p.vx * 0.015;
+                p.mesh.rotation.x = -p.vz * 0.015;
+
+                if (i === NUM_PISOS - 1) {
+                    // Magnitud escalar del vector de desplazamiento de la cúspide (Escala Real m)
+                    maxDisp = Math.sqrt(Math.pow(p.x - posSueloX, 2) + Math.pow(p.z - posSueloZ, 2)) * 4.8;
+                }
+            }
+
+            // Actualizar Métricas en UI
+            document.getElementById('disp-val').innerText = `${maxDisp.toFixed(2)} m`;
+            
+            // Medidor de Fatiga Estructural del Concreto
+            const limitStress = 6.2; // Umbral crítico
+            let stressPerc = Math.min(100, (maxDisp / limitStress) * 100);
+            const stressEl = document.getElementById('stress-val');
+            stressEl.innerText = `${stressPerc.toFixed(1)}% MAT`;
+
+            if (stressPerc < 30) stressEl.className = "text-right text-green-400 font-bold";
+            else if (stressPerc < 65) stressEl.className = "text-right text-yellow-400 font-bold";
+            else if (stressPerc < 88) stressEl.className = "text-right text-orange-500 font-bold";
+            else stressEl.className = "text-right text-red-600 font-black animate-pulse";
+        }
+
+        // --- SISTEMA DINÁMICO DE INTERFAZ MATRIX ---
+        function updateComparisonMatrix() {
+            const containerBox = document.getElementById('comparison-box');
+            containerBox.innerHTML = "";
+            
+            // Buscar la escala correspondiente actual
+            let currentTarget = structuralMatrix[0];
+            for (let target of structuralMatrix) {
+                if (magRichter <= target.max) {
+                    currentTarget = target;
+                    break;
+                }
+                if (magRichter > 9.0) currentTarget = structuralMatrix[5];
+            }
+
+            containerBox.innerHTML = `
+                <div class="bg-slate-900/50 p-2 rounded border border-slate-700">
+                    <span class="text-red-400 font-bold">Crítico para:</span> <br>
+                    <span class="text-white text-xs">${currentTarget.tipo}</span>
+                </div>
+                <div class="text-slate-300 text-[10px] leading-relaxed mt-1">
+                    <span class="text-amber-500 font-bold">Efecto:</span> ${currentTarget.status}
+                </div>
+            `;
+        }
+
+        // --- MANIPULACIÓN DE EVENTOS E INTERFAZ ---
         const slider = document.getElementById('richter-slider');
-        const sliderVal = document.getElementById('richter-slider-val');
+        const sliderDisplay = document.getElementById('slider-display');
         const richterVal = document.getElementById('richter-val');
         const btnTrigger = document.getElementById('btn-trigger');
         const btnReset = document.getElementById('btn-reset');
 
-        slider.addEventListener('input', (e) => {
-            richterMagnitude = parseFloat(e.target.value);
-            sliderVal.innerText = richterMagnitude.toFixed(1);
-            richterVal.innerText = `${richterMagnitude.toFixed(1)} M_w`;
-            if(earthquakeActive) updateSeismicPhysics(0);
-        });
+        function onSliderChange(val) {
+            magRichter = parseFloat(val);
+            sliderDisplay.innerText = magRichter.toFixed(1);
+            richterVal.innerText = `${magRichter.toFixed(1)} Mw`;
+            updateComparisonMatrix();
+        }
+
+        slider.addEventListener('input', (e) => onSliderChange(e.target.value));
 
         btnTrigger.addEventListener('click', () => {
-            earthquakeActive = !earthquakeActive;
-            if (earthquakeActive) {
-                btnTrigger.innerText = "Detener Sismo";
-                btnTrigger.classList.replace('bg-yellow-600', 'bg-red-600');
-                btnTrigger.classList.add('text-white');
+            sismoActivo = !sismoActivo;
+            if (sismoActivo) {
+                btnTrigger.innerText = "Cortar Excitación";
+                btnTrigger.className = "flex-2 w-3/4 bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider shadow-lg shadow-red-500/20";
             } else {
-                btnTrigger.innerText = "Iniciar Onda Símica";
-                btnTrigger.classList.replace('bg-red-600', 'bg-yellow-600');
-                btnTrigger.classList.remove('text-white');
+                btnTrigger.innerText = "Excitar Estructura";
+                btnTrigger.className = "flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20";
             }
         });
 
         btnReset.addEventListener('click', () => {
-            earthquakeActive = false;
-            earthquakeTime = 0;
-            richterMagnitude = 1.0;
+            sismoActivo = false;
+            tSismo = 0;
             slider.value = 1.0;
-            sliderVal.innerText = "1.0";
-            richterVal.innerText = "1.0 M_w";
-            document.getElementById('disp-val').innerText = "0.00 m";
-            document.getElementById('freq-val').innerText = "0.50 Hz";
-            btnTrigger.innerText = "Iniciar Onda Símica";
-            btnTrigger.className = "flex-1 bg-yellow-600 hover:bg-yellow-500 active:bg-yellow-700 text-gray-900 font-black py-3 px-4 rounded-xl transition duration-150 uppercase tracking-wider text-xs";
-            updateStructuralStatus(0);
-        });
-
-        // Adaptación de pantalla móvil / Cambios de orientación
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // Bucle de Renderizado de alta frecuencia (60fps / 120fps)
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const deltaTime = clock.getDelta();
+            onSliderChange(1.0);
+            btnTrigger.innerText = "Excitar Estructura";
+            btnTrigger.className = "flex-2 w-3/4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition-all duration-150 text-xs uppercase tracking-wider";
             
-            // Actualizar físicas analíticas
-            updateSeismicPhysics(deltaTime);
+            // Forzar reposo de vectores físicos
+            estructura.forEach(p => {
+                p.x = 0; p.z = 0; p.vx = 0; p.vz = 0; p.ax = 0; p.az = 0;
+                p.mesh.position.set(p.mesh.position.x, p.y, p.mesh.position.z);
+                p.mesh.rotation.set(0,0,0);
+            });
+            grid.position.set(0, 0.02, 0);
+        </script>
+        <script>
+            // Continuación del script de inicialización de eventos para evitar cortes
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Inicializar la primera vista de la matriz
+            updateComparisonMatrix();
+
+            // --- BUCLE DE RENDERIZACIÓN CONTROLADO ---
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                const dt = clock.getDelta();
+                
+                // Ejecutar motor de físicas acopladas
+                updatePhysicsMDOF(dt);
+                
+                controls.update();
+                renderer.render(scene, camera);
+            }
             
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        
-        animate();
-    </script>
+            animate();
+        </script>
 </body>
 </html>
